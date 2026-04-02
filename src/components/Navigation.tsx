@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronRight } from 'lucide-react';
 import SearchBar from './SearchBar';
-import { stateRoute, specialtiesIndexRoute } from '@/lib/routes';
+import { statesIndexRoute, specialtiesIndexRoute } from '@/lib/routes';
 
 const navLinks = [
-  { label: 'Find a Therapist', href: stateRoute('california') },
+  { label: 'Find a Therapist', href: statesIndexRoute() },
   { label: 'Specialties', href: specialtiesIndexRoute() },
   { label: 'About', href: '/about' },
 ];
@@ -146,7 +146,7 @@ export default function Navigation() {
                   className="mt-auto pb-8"
                 >
                   <Link
-                    href={stateRoute('california')}
+                    href={statesIndexRoute()}
                     onClick={() => setMobileOpen(false)}
                     className="btn-primary w-full text-center"
                   >

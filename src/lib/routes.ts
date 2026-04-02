@@ -7,6 +7,12 @@
 
 import { slugify } from './utils';
 
+// ─── States index ───
+
+export function statesIndexRoute() {
+  return '/states';
+}
+
 // ─── State-level routes ───
 
 export function stateRoute(stateSlug: string) {

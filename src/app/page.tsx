@@ -4,7 +4,7 @@ import { getCities, getSpecialties, getFeaturedProviders, getStates } from '@/li
 import SearchBar from '@/components/SearchBar';
 import ProviderCard from '@/components/ProviderCard';
 import AnimatedSection, { StaggerContainer, StaggerItem } from '@/components/AnimatedSection';
-import { stateRoute, cityRoute, specialtiesIndexRoute, specialtyRoute } from '@/lib/routes';
+import { stateRoute, statesIndexRoute, cityRoute, specialtiesIndexRoute, specialtyRoute } from '@/lib/routes';
 
 export const revalidate = 3600;
 
@@ -225,7 +225,7 @@ export default async function HomePage() {
             </StaggerContainer>
 
             <AnimatedSection className="mt-10 text-center">
-              <Link href={stateRoute('california')} className="btn-primary inline-flex">
+              <Link href={statesIndexRoute()} className="btn-primary inline-flex">
                 <span>Browse all providers</span>
                 <ArrowRight size={16} />
               </Link>
@@ -267,7 +267,7 @@ export default async function HomePage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-ink">Ready to find your therapist?</h2>
             <p className="mt-4 text-lg text-ink-muted">Search our directory of {totalProviders}+ qualified pelvic floor physical therapists across {states.length} states.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href={stateRoute('california')} className="btn-primary">
+              <Link href={statesIndexRoute()} className="btn-primary">
                 <span>Browse providers</span>
                 <ArrowRight size={16} />
               </Link>

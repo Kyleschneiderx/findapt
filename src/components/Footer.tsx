@@ -112,7 +112,7 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2.5">
               <li>
-                <Link href={stateRoute('california')} className="text-sm text-ink-muted hover:text-rose-500 transition-colors link-underline">
+                <Link href="/states" className="text-sm text-ink-muted hover:text-rose-500 transition-colors link-underline">
                   Browse All Providers
                 </Link>
               </li>
