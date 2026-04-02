@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, MapPin, Shield, Users, Heart, Star, Sparkles } from 'lucide-react';
-import { getCities, getSpecialties, getFeaturedProviders } from '@/lib/data';
+import { getCities, getSpecialties, getFeaturedProviders, getStates } from '@/lib/data';
 import SearchBar from '@/components/SearchBar';
 import ProviderCard from '@/components/ProviderCard';
 import AnimatedSection, { StaggerContainer, StaggerItem } from '@/components/AnimatedSection';
@@ -9,15 +9,17 @@ import { stateRoute, cityRoute, specialtiesIndexRoute, specialtyRoute } from '@/
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const [cities, specialties, featuredProviders] = await Promise.all([
-    getCities('california'),
+  const [allCities, specialties, featuredProviders, states] = await Promise.all([
+    getCities(),
     getSpecialties(),
     getFeaturedProviders(),
+    getStates(),
   ]);
 
-  const topCities = cities.slice(0, 12);
+  const topCities = allCities.slice(0, 12);
   const topSpecialties = specialties.slice(0, 8);
-  const totalProviders = cities.reduce((sum, c) => sum + c.provider_count, 0);
+  const totalProviders = allCities.reduce((sum, c) => sum + c.provider_count, 0);
+  const topStates = states.slice(0, 8);
 
   return (
     <>
@@ -52,7 +54,7 @@ export default async function HomePage() {
             <AnimatedSection delay={0.3}>
               <p className="mt-6 text-lg sm:text-xl text-ink-muted leading-relaxed max-w-2xl mx-auto">
                 Connect with {totalProviders}+ specialized pelvic floor therapists across{' '}
-                {cities.length} cities. Expert care for your most personal health needs.
+                {states.length} states and {allCities.length} cities. Expert care for your most personal health needs.
               </p>
             </AnimatedSection>
 
@@ -65,18 +67,18 @@ export default async function HomePage() {
             <AnimatedSection delay={0.5}>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm text-ink-muted">
                 <span className="flex items-center gap-1.5">
+                  <Shield size={14} className="text-rose-400" />
+                  {states.length} states
+                </span>
+                <span className="w-1 h-1 rounded-full bg-warm-300" />
+                <span className="flex items-center gap-1.5">
                   <MapPin size={14} className="text-gold-400" />
-                  {cities.length} cities
+                  {allCities.length} cities
                 </span>
                 <span className="w-1 h-1 rounded-full bg-warm-300" />
                 <span className="flex items-center gap-1.5">
                   <Users size={14} className="text-mauve-400" />
                   {totalProviders}+ providers
-                </span>
-                <span className="w-1 h-1 rounded-full bg-warm-300" />
-                <span className="flex items-center gap-1.5">
-                  <Shield size={14} className="text-rose-400" />
-                  {specialties.length} specialties
                 </span>
               </div>
             </AnimatedSection>
@@ -153,40 +155,55 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─── Browse by City ─── */}
+      {/* ─── Browse by State ─── */}
       <section className="py-20 sm:py-24 bg-section-gradient">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <AnimatedSection className="flex items-end justify-between mb-10">
+          <AnimatedSection className="mb-10">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-ink">Popular cities in California</h2>
-              <p className="mt-3 text-ink-muted text-lg">Explore pelvic floor therapists in major California cities.</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-ink">Browse by state</h2>
+              <p className="mt-3 text-ink-muted text-lg">Find pelvic floor therapists across the United States.</p>
             </div>
-            <Link href={stateRoute('california')} className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-rose-500 hover:text-rose-600 transition-colors group">
-              All cities
-              <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-            </Link>
           </AnimatedSection>
 
           <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" staggerDelay={0.05}>
-            {topCities.map((city) => (
-              <StaggerItem key={city.city_slug}>
-                <Link href={cityRoute('california', city.city_slug)} className="card group/city p-5 flex items-start gap-3 h-full">
-                  <MapPin size={18} className="text-gold-400 shrink-0 mt-0.5 group-hover/city:text-rose-400 transition-colors" />
+            {topStates.map((state) => (
+              <StaggerItem key={state.state_slug}>
+                <Link href={stateRoute(state.state_slug)} className="card group/state p-5 flex items-start gap-3 h-full">
+                  <MapPin size={18} className="text-gold-400 shrink-0 mt-0.5 group-hover/state:text-rose-400 transition-colors" />
                   <div>
-                    <h3 className="font-semibold text-ink group-hover/city:text-rose-500 transition-colors">{city.city}</h3>
-                    <p className="text-sm text-ink-muted mt-0.5">{city.provider_count} provider{city.provider_count !== 1 ? 's' : ''}</p>
+                    <h3 className="font-semibold text-ink group-hover/state:text-rose-500 transition-colors">{state.state}</h3>
+                    <p className="text-sm text-ink-muted mt-0.5">{state.provider_count} providers &middot; {state.city_count} cities</p>
                   </div>
                 </Link>
               </StaggerItem>
             ))}
           </StaggerContainer>
+        </div>
+      </section>
 
-          <div className="mt-6 sm:hidden text-center">
-            <Link href={stateRoute('california')} className="btn-secondary inline-flex">
-              <span>View all cities</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
+      {/* ─── Popular Cities ─── */}
+      <section className="py-20 sm:py-24 bg-section-alt">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <AnimatedSection className="mb-10">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-ink">Popular cities</h2>
+              <p className="mt-3 text-ink-muted text-lg">Top cities with the most pelvic floor therapists.</p>
+            </div>
+          </AnimatedSection>
+
+          <StaggerContainer className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" staggerDelay={0.05}>
+            {topCities.map((city) => (
+              <StaggerItem key={`${city.state_slug}-${city.city_slug}`}>
+                <Link href={cityRoute(city.state_slug, city.city_slug)} className="card group/city p-5 flex items-start gap-3 h-full">
+                  <MapPin size={18} className="text-gold-400 shrink-0 mt-0.5 group-hover/city:text-rose-400 transition-colors" />
+                  <div>
+                    <h3 className="font-semibold text-ink group-hover/city:text-rose-500 transition-colors">{city.city}</h3>
+                    <p className="text-sm text-ink-muted mt-0.5">{city.provider_count} providers</p>
+                  </div>
+                </Link>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
         </div>
       </section>
 
@@ -248,7 +265,7 @@ export default async function HomePage() {
         <div className="max-w-3xl mx-auto px-5 sm:px-8 text-center">
           <AnimatedSection>
             <h2 className="text-3xl sm:text-4xl font-bold text-ink">Ready to find your therapist?</h2>
-            <p className="mt-4 text-lg text-ink-muted">Search our directory of {totalProviders}+ qualified pelvic floor physical therapists in California.</p>
+            <p className="mt-4 text-lg text-ink-muted">Search our directory of {totalProviders}+ qualified pelvic floor physical therapists across {states.length} states.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href={stateRoute('california')} className="btn-primary">
                 <span>Browse providers</span>
