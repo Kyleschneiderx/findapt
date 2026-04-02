@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    return [
+    return {
+      // beforeFiles rewrites run BEFORE filesystem/dynamic route matching
+      // This is critical — without it, /state/city/pelvic-floor-physical-therapy
+      // would match [state]/[city]/[provider] and 404 because there's no provider
+      // with that slug.
+      beforeFiles: [
       // ─── State-level keyword pages ───
       // /california/pelvic-floor-physical-therapy → state listing page
       {
@@ -64,7 +69,10 @@ const nextConfig: NextConfig = {
         source: '/:specialty-physical-therapy',
         destination: '/specialties/:specialty',
       },
-    ];
+    ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 
   async redirects() {
