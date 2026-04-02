@@ -252,6 +252,49 @@ function validateWebsite(website: string): string | null {
   return website.trim();
 }
 
+// ─── Zip Code → City Fallback ───
+
+const zipCache: Record<string, string | null> = {};
+
+async function lookupCityByZip(zip: string): Promise<string | null> {
+  if (!zip) return null;
+  const cleanZip = zip.replace(/\D/g, '').slice(0, 5).padStart(5, '0');
+  if (cleanZip.length !== 5 || cleanZip === '00000') return null;
+  if (zipCache[cleanZip] !== undefined) return zipCache[cleanZip];
+
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${cleanZip}`);
+    if (!res.ok) { zipCache[cleanZip] = null; return null; }
+    const data = await res.json();
+    const city = data.places?.[0]?.['place name'] || null;
+    zipCache[cleanZip] = city;
+    return city;
+  } catch {
+    zipCache[cleanZip] = null;
+    return null;
+  }
+}
+
+function isBrokenCity(city: string): boolean {
+  if (!city || city.length <= 2) return true;
+  if (/^\d+$/.test(city)) return true;
+  if (/\d/.test(city)) return true;
+  const lower = city.toLowerCase();
+  const brokenPatterns = [
+    'suite', 'unit', 'floor', 'mobile', 'clinic', 'blvd', 'highway',
+    'avenue', 'street', 'broadway', 'n/a', '#', 'box ', 'building',
+    'ste ', 'medical', 'concierge', 'virtual', 'pkwy', 'telehealth',
+    'http', 'www.', 'in-home', 'home health', 'outpatient', 'shopping',
+    'multiple', 'call for', 'shared upon', 'in clients', 'or you can',
+    'practice', 'services',
+  ];
+  return brokenPatterns.some((p) => lower.includes(p));
+}
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // ─── Main Pipeline ───
 
 async function main() {
@@ -261,22 +304,10 @@ async function main() {
   const rows = parseCSV(csvPath);
   console.log(`📊 Found ${rows.length} records\n`);
 
-  // First, add lat/lng columns if they don't exist
-  console.log('📦 Ensuring database schema supports lat/lng...');
-  const { error: alterError } = await supabase.rpc('exec_sql', {
-    sql: `
-      ALTER TABLE providers ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
-      ALTER TABLE providers ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
-    `,
-  }).maybeSingle();
-  // This might fail if rpc doesn't exist, that's ok — we'll handle via MCP later
-  if (alterError) {
-    console.log('  ⚠️  Could not auto-add lat/lng columns. They may need to be added via Supabase dashboard.');
-  }
-
   const stats = {
     total: rows.length,
     citiesExtracted: 0,
+    zipFixed: 0,
     phoneCleaned: 0,
     websiteCleaned: 0,
     rejected: 0,
@@ -315,7 +346,19 @@ async function main() {
     const zip = (row.zip || '').trim();
 
     // Extract city from dirty field
-    const { city, streetAddress } = extractCity(rawCity, address, state, zip);
+    let { city, streetAddress } = extractCity(rawCity, address, state, zip);
+
+    // If city is still broken after extraction, fall back to zip code lookup
+    if (isBrokenCity(city)) {
+      const zipCity = await lookupCityByZip(zip);
+      if (zipCity) {
+        streetAddress = rawCity; // Use the whole raw field as the address
+        city = zipCity;
+        stats.zipFixed++;
+        await sleepMs(80); // Rate limit
+      }
+    }
+
     const citySlug = slugify(city);
 
     if (cityExamples.length < 50 && rawCity !== city) {
@@ -377,6 +420,7 @@ async function main() {
   console.log(`  Skipped (CA dupe):   ${stats.skippedCA}`);
   console.log(`  Rejected (no name):  ${stats.rejected}`);
   console.log(`  Cities extracted:    ${stats.citiesExtracted}`);
+  console.log(`  Fixed via zip API:   ${stats.zipFixed}`);
   console.log(`  Ready to insert:     ${providers.length}`);
   console.log();
   console.log('📍 Sample city extractions:');
