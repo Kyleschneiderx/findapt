@@ -175,25 +175,29 @@ function extractCity(rawCity: string, address: string, state: string, _zip: stri
   return { city: cleanExtractedCity(titleCase(lastWord)), streetAddress: cleanRaw };
 }
 
-// NOTE: "road" and "cross" are intentionally excluded because they appear in
-// real city names like "Owens Cross Roads", "Eagle Road", "Cross Plains" etc.
-// This means some addresses ending in "Road" may include it in the city name,
-// but that's better than losing real city names.
 const STREET_SUFFIXES = new Set([
   'st', 'street', 'ave', 'avenue', 'blvd', 'boulevard', 'dr', 'drive',
-  'rd', 'ln', 'lane', 'ct', 'court', 'pl', 'place', 'way',
+  'rd', 'road', 'ln', 'lane', 'ct', 'court', 'pl', 'place', 'way',
   'pkwy', 'parkway', 'cir', 'circle', 'hwy', 'highway', 'loop',
   'ter', 'terrace', 'trail', 'trl', 'sq', 'square', 'pass', 'run',
-  'pike', 'turnpike', 'bypass', 'xing', 'row', 'path',
+  'pike', 'turnpike', 'bypass', 'xing', 'row', 'path', 'crossing',
+  'glen', 'close', 'plaza',
 ]);
 
 const SUITE_WORDS = new Set([
-  'suite', 'ste', 'unit', 'apt', 'bldg', 'floor', '#', 'room', 'rm',
+  'suite', 'ste', 'unit', 'apt', 'bldg', 'floor', '#', 'room', 'rm', 'building',
 ]);
 
 const DIRECTION_WORDS = new Set([
   'n', 's', 'e', 'w', 'sw', 'se', 'nw', 'ne',
   'north', 'south', 'east', 'west',
+]);
+
+// Words that appear in city names but also in street names — skip these as stop words
+// during extraction only if followed by a known city pattern
+const AMBIGUOUS_WORDS = new Set([
+  'center', 'park', 'hill', 'valley', 'springs', 'falls', 'grove',
+  'heights', 'lake', 'creek', 'river', 'bridge', 'mount', 'bay',
 ]);
 
 /**
@@ -207,18 +211,54 @@ function cleanExtractedCity(city: string): string {
   cleaned = cleaned.replace(/^[A-Za-z]\s+(?=[A-Z])/, '');
 
   // Remove leading "Suite X " or "Ste X ": "Suite C Oneonta" → "Oneonta"
-  cleaned = cleaned.replace(/^(?:suite|ste|unit|apt)\s+\S+\s+/i, '');
+  cleaned = cleaned.replace(/^(?:suite|ste|unit|apt|bldg)\s+\S+\s+/i, '');
 
-  // Remove leading "N/A " or "N/a ": "N/a Birmingham" → "Birmingham"
+  // Remove leading "N/A " or "N/a " or "OH ": "N/a Birmingham" → "Birmingham"
   cleaned = cleaned.replace(/^N\/[Aa]\s+/, '');
+  cleaned = cleaned.replace(/^[A-Z]{2}\s+(?=[A-Z][a-z])/, ''); // "OH Lewis Center" → "Lewis Center"
 
-  // Remove leading "mobile clinic ": "Mobile Clinic Huntsville" → "Huntsville"
-  cleaned = cleaned.replace(/^mobile\s+clinic\s+/i, '');
+  // Remove leading "mobile clinic/practice/therapy": "Mobile Clinic Huntsville" → "Huntsville"
+  cleaned = cleaned.replace(/^(?:mobile|virtual|concierge|telehealth|in-?home|outpatient)\s+(?:clinic|practice|therapy|services?|pt|physical therapy|pelvic pt|visits?)?\s*/i, '');
+
+  // Remove leading phrases like "Home Based Services ", "IN The Drawdy Business Park "
+  cleaned = cleaned.replace(/^(?:home\s+based\s+services?|in\s+the\s+\w+\s+\w+\s+\w+\s+\w+|offering\s+in\s+home\s+visits?|email\s+for\s+\w+|call\s+for\s+\w+\s+after\s+\w+|shared\s+upon\s+\w+\s+\w+|no\s+address|address\s+provided|near\s+\w+\s+and\s+\w+\s+\w+)\s+/i, '');
+
+  // Remove "greater X area": "Greater Sioux Falls Area Sioux Falls" → "Sioux Falls"
+  cleaned = cleaned.replace(/^greater\s+.+?\s+area\s+/i, '');
+
+  // Remove leading business names: "Baystate Rehabilitation Care Springfield" → "Springfield"
+  // Match: 2+ capitalized words ending with known institutional words
+  cleaned = cleaned.replace(/^(?:\w+\s+)*(?:rehabilitation|associates|hospital|medical|gastroenterology|department|plaza|office\s+park|business\s+park|shopping\s+center)\s+(?:care\s+|of\s+\w+\s+\w+\s+)?/i, '');
+
+  // Remove "Www.X.com " or "Https://X " or "email@gmail.com "
+  cleaned = cleaned.replace(/^(?:https?:\/\/|www\.)\S+\s+/i, '');
+  cleaned = cleaned.replace(/^\S+@\S+\.\S+\s+/i, '');
+
+  // Remove leading "OR You Can Come TO Our Clinic AT 177 Champion Drive "
+  cleaned = cleaned.replace(/^or\s+you\s+can\s+.+?\s+(?:at|in)\s+.+?\s+(?:road|drive|street|ave|blvd|lane|court|way|pkwy)\s+/i, '');
+
+  // Remove leading "And B ": "And B Cabot" → "Cabot"
+  cleaned = cleaned.replace(/^and\s+[a-z]\s+/i, '');
+
+  // Remove leading "(inside X) ": "(inside BE One Wellness) Dubuque" → "Dubuque"
+  cleaned = cleaned.replace(/^\(.+?\)\s+/, '');
+
+  // Remove leading "- " or "-- "
+  cleaned = cleaned.replace(/^-+\s+/, '');
 
   // If still starts with a lone digit word, strip it: "115 Hoover" → "Hoover"
   cleaned = cleaned.replace(/^\d+\s+(?=[A-Z])/, '');
 
-  return cleaned.trim() || city.trim();
+  // Remove duplicate city: "Colorado Springs Colorado Springs" → "Colorado Springs"
+  const half = Math.floor(cleaned.length / 2);
+  const first = cleaned.substring(0, half).trim();
+  const second = cleaned.substring(half).trim();
+  if (first.toLowerCase() === second.toLowerCase() && first.length > 3) {
+    cleaned = first;
+  }
+
+  // Final: if result is too short or empty, return original
+  return cleaned.trim().length >= 2 ? cleaned.trim() : city.trim();
 }
 
 function titleCase(s: string): string {
@@ -279,6 +319,7 @@ function isBrokenCity(city: string): boolean {
   if (!city || city.length <= 2) return true;
   if (/^\d+$/.test(city)) return true;
   if (/\d/.test(city)) return true;
+  if (city.length > 30) return true;
   const lower = city.toLowerCase();
   const brokenPatterns = [
     'suite', 'unit', 'floor', 'mobile', 'clinic', 'blvd', 'highway',
@@ -286,7 +327,10 @@ function isBrokenCity(city: string): boolean {
     'ste ', 'medical', 'concierge', 'virtual', 'pkwy', 'telehealth',
     'http', 'www.', 'in-home', 'home health', 'outpatient', 'shopping',
     'multiple', 'call for', 'shared upon', 'in clients', 'or you can',
-    'practice', 'services',
+    'practice', 'services', ' road ', ' drive ', ' lane ', ' plaza ',
+    'gmail', 'email', 'no address', 'nowhere', 'offering', 'address',
+    'rehabilitation', 'hospital', 'department', 'scheduling', 'license',
+    'gastroenterology', 'greater ', '(inside',
   ];
   return brokenPatterns.some((p) => lower.includes(p));
 }
