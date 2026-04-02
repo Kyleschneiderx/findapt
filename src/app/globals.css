@@ -1,0 +1,331 @@
+@import "tailwindcss";
+
+/* ─── FindaPT Design System: "Warm Clinical Luxe" ─── */
+
+@theme inline {
+  /* ── Color Palette ── */
+  --color-rose-50: #FFF5F6;
+  --color-rose-100: #FFE8EB;
+  --color-rose-200: #FFCDD4;
+  --color-rose-300: #F4A5B0;
+  --color-rose-400: #E8788A;
+  --color-rose-500: #D4556B;
+  --color-rose-600: #B8384F;
+  --color-rose-700: #8C2439;
+
+  --color-mauve-50: #F8F5F9;
+  --color-mauve-100: #EDE7F0;
+  --color-mauve-200: #D4C9DA;
+  --color-mauve-300: #B8A8C0;
+  --color-mauve-400: #9B8AA0;
+  --color-mauve-500: #7A6B80;
+  --color-mauve-600: #5E5063;
+
+  --color-gold-50: #FDF8F2;
+  --color-gold-100: #FAF0E2;
+  --color-gold-200: #F0DCC0;
+  --color-gold-300: #E2C49A;
+  --color-gold-400: #D4A574;
+  --color-gold-500: #C08A52;
+  --color-gold-600: #9E6E3C;
+
+  --color-warm-50: #FDFBF9;
+  --color-warm-100: #F9F5F0;
+  --color-warm-200: #F0EAE2;
+  --color-warm-300: #E2D8CC;
+  --color-warm-400: #C9BBAB;
+
+  --color-ink: #2D2A32;
+  --color-ink-light: #4A4550;
+  --color-ink-muted: #7A7580;
+
+  /* ── Fonts ── */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* ── Shadows ── */
+  --shadow-card: 0 1px 3px rgba(45, 42, 50, 0.04), 0 4px 12px rgba(45, 42, 50, 0.03);
+  --shadow-card-hover: 0 4px 16px rgba(45, 42, 50, 0.08), 0 8px 32px rgba(212, 85, 107, 0.06);
+  --shadow-elevated: 0 8px 30px rgba(45, 42, 50, 0.08), 0 2px 8px rgba(45, 42, 50, 0.04);
+  --shadow-nav: 0 1px 0 rgba(45, 42, 50, 0.04), 0 4px 20px rgba(45, 42, 50, 0.03);
+
+  /* ── Radii ── */
+  --radius-card: 16px;
+  --radius-pill: 100px;
+  --radius-button: 12px;
+
+  /* ── Transitions ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Base ─── */
+
+:root {
+  --background: #FDFBF9;
+  --foreground: #2D2A32;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-rose-200);
+  color: var(--color-rose-700);
+}
+
+/* ─── Noise Texture Overlay ─── */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ─── Warm Gradient Backgrounds ─── */
+
+.bg-hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 100%, rgba(232, 120, 138, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 0%, rgba(155, 138, 160, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(212, 165, 116, 0.04) 0%, transparent 60%),
+    var(--color-warm-50);
+}
+
+.bg-section-gradient {
+  background:
+    radial-gradient(ellipse 70% 50% at 80% 80%, rgba(232, 120, 138, 0.05) 0%, transparent 70%),
+    var(--color-warm-50);
+}
+
+.bg-section-alt {
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(155, 138, 160, 0.05) 0%, transparent 60%),
+    var(--color-warm-100);
+}
+
+/* ─── Card Styles ─── */
+
+.card {
+  background: white;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(45, 42, 50, 0.04);
+  transition: all 0.4s var(--ease-out-expo);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(232, 120, 138, 0.12);
+  transform: translateY(-2px);
+}
+
+/* ─── Specialty Tag Pills ─── */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.tag-rose {
+  background: var(--color-rose-50);
+  color: var(--color-rose-600);
+  border: 1px solid var(--color-rose-100);
+}
+
+.tag-rose:hover {
+  background: var(--color-rose-100);
+  border-color: var(--color-rose-200);
+}
+
+.tag-mauve {
+  background: var(--color-mauve-50);
+  color: var(--color-mauve-600);
+  border: 1px solid var(--color-mauve-100);
+}
+
+.tag-gold {
+  background: var(--color-gold-50);
+  color: var(--color-gold-600);
+  border: 1px solid var(--color-gold-100);
+}
+
+/* ─── Buttons ─── */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 32px;
+  min-height: 48px;
+  border-radius: var(--radius-button);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  background: linear-gradient(135deg, var(--color-rose-400) 0%, var(--color-rose-500) 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.35s var(--ease-out-expo);
+  box-shadow: 0 2px 8px rgba(212, 85, 107, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--color-rose-500) 0%, var(--color-rose-600) 100%);
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out-expo);
+}
+
+.btn-primary > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212, 85, 107, 0.3);
+}
+
+.btn-primary:hover::after {
+  opacity: 1;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 32px;
+  min-height: 48px;
+  border-radius: var(--radius-button);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  background: white;
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-warm-300);
+  cursor: pointer;
+  transition: all 0.35s var(--ease-out-expo);
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-rose-300);
+  color: var(--color-rose-600);
+  background: var(--color-rose-50);
+  transform: translateY(-1px);
+}
+
+/* ─── Decorative Petal Shape ─── */
+
+.petal {
+  position: absolute;
+  border-radius: 60% 40% 50% 50% / 50% 50% 40% 60%;
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+.petal-rose {
+  background: var(--color-rose-400);
+}
+
+.petal-mauve {
+  background: var(--color-mauve-400);
+}
+
+.petal-gold {
+  background: var(--color-gold-400);
+}
+
+/* ─── Divider ─── */
+
+.divider-warm {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-warm-300) 20%,
+    var(--color-rose-200) 50%,
+    var(--color-warm-300) 80%,
+    transparent 100%
+  );
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-warm-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-warm-400);
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-mauve-400);
+}
+
+/* ─── Focus Styles ─── */
+
+:focus-visible {
+  outline: 2px solid var(--color-rose-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Link underline animation ─── */
+
+.link-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--color-rose-400), var(--color-gold-400));
+  transition: width 0.4s var(--ease-out-expo);
+}
+
+.link-underline:hover::after {
+  width: 100%;
+}
