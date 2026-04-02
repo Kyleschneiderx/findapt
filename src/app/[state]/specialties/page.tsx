@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Sparkles, Users, ArrowRight } from 'lucide-react';
-import { getProvidersForStateSpecialty, getSpecialties } from '@/lib/data';
+import { getProvidersForStateSpecialty, getSpecialties, getStates } from '@/lib/data';
 import { deslugify } from '@/lib/utils';
 import { SPECIALTY_META } from '@/lib/types';
 import { stateRoute, stateSpecialtiesRoute, stateSpecialtyRoute, stateTelehealthRoute } from '@/lib/routes';
@@ -33,7 +33,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export async function generateStaticParams() {
-  return [{ state: 'california' }];
+  const states = await getStates();
+  return states.map((s) => ({ state: s.state_slug }));
 }
 
 export default async function StateSpecialtiesPage({ params }: PageProps) {

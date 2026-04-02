@@ -170,14 +170,25 @@ export default function Footer() {
             </ul>
 
             <h3 className="text-sm font-semibold text-ink uppercase tracking-wider mb-4 mt-8">
-              States
+              Top States
             </h3>
             <ul className="space-y-2.5">
-              <li>
-                <Link href={stateRoute('california')} className="text-sm text-ink-muted hover:text-rose-500 transition-colors link-underline">
-                  California
-                </Link>
-              </li>
+              {[
+                { name: 'California', slug: 'california' },
+                { name: 'New York', slug: 'new-york' },
+                { name: 'Texas', slug: 'texas' },
+                { name: 'Florida', slug: 'florida' },
+                { name: 'Washington', slug: 'washington' },
+                { name: 'Illinois', slug: 'illinois' },
+                { name: 'Pennsylvania', slug: 'pennsylvania' },
+                { name: 'Colorado', slug: 'colorado' },
+              ].map((s) => (
+                <li key={s.slug}>
+                  <Link href={stateRoute(s.slug)} className="text-sm text-ink-muted hover:text-rose-500 transition-colors link-underline">
+                    {s.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>

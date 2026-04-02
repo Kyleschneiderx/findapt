@@ -15,7 +15,8 @@ interface StatePageProps {
 }
 
 export async function generateStaticParams() {
-  return [{ state: 'california' }];
+  const states = await getStates();
+  return states.map((s) => ({ state: s.state_slug }));
 }
 
 export async function generateMetadata({ params }: StatePageProps): Promise<Metadata> {
