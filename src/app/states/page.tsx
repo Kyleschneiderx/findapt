@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { MapPin, Users, Building2 } from 'lucide-react';
 import { getStates } from '@/lib/data';
 import { stateRoute } from '@/lib/routes';
+import { deslugify } from '@/lib/utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import AnimatedSection, { StaggerContainer, StaggerItem } from '@/components/AnimatedSection';
 
@@ -25,7 +26,8 @@ export const metadata: Metadata = {
 };
 
 export default async function StatesPage() {
-  const states = await getStates();
+  const rawStates = await getStates();
+  const states = rawStates.sort((a, b) => a.state_slug.localeCompare(b.state_slug));
   const totalProviders = states.reduce((sum, s) => sum + s.provider_count, 0);
   const totalCities = states.reduce((sum, s) => sum + s.city_count, 0);
 
@@ -89,7 +91,7 @@ export default async function StatesPage() {
                   <MapPin size={18} className="text-gold-400 shrink-0 mt-0.5 group-hover/state:text-rose-400 transition-colors" />
                   <div>
                     <h2 className="font-semibold text-ink group-hover/state:text-rose-500 transition-colors">
-                      {state.state}
+                      {deslugify(state.state_slug)}
                     </h2>
                     <p className="text-sm text-ink-muted mt-0.5">
                       {state.provider_count} providers &middot; {state.city_count} cities
