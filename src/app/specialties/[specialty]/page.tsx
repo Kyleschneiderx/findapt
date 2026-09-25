@@ -5,7 +5,7 @@ import { ArrowRight, MapPin, Users, Sparkles } from 'lucide-react';
 import { getSpecialtyBySlug, getSpecialties, getProviders } from '@/lib/data';
 import { SPECIALTY_META } from '@/lib/types';
 import { deslugify } from '@/lib/utils';
-import { specialtyRoute, specialtiesIndexRoute, cityRoute, providerRoute } from '@/lib/routes';
+import { specialtyRoute, specialtiesIndexRoute, cityRoute, providerRoute, stateSpecialtyRoute } from '@/lib/routes';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import ProviderCard from '@/components/ProviderCard';
 import AnimatedSection, { StaggerContainer, StaggerItem } from '@/components/AnimatedSection';
@@ -13,6 +13,7 @@ import AnimatedSection, { StaggerContainer, StaggerItem } from '@/components/Ani
 export const revalidate = 3600;
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://findapt.com';
+const FEATURED_PROVIDER_LIMIT = 24;
 
 interface PageProps {
   params: Promise<{ specialty: string }>;
@@ -80,6 +81,18 @@ export default async function SpecialtyPage({ params }: PageProps) {
   const cities = Array.from(cityMap.values())
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
+
+  // State breakdown → links to the state × specialty pages. This national page
+  // is a hub: it must not render every provider (the largest specialty has
+  // ~6,000, which exceeds Vercel's 19 MB prerender limit).
+  const stateMap = new Map<string, { stateSlug: string; count: number }>();
+  for (const p of providers) {
+    const existing = stateMap.get(p.state_slug);
+    if (existing) existing.count++;
+    else stateMap.set(p.state_slug, { stateSlug: p.state_slug, count: 1 });
+  }
+  const states = Array.from(stateMap.values()).sort((a, b) => b.count - a.count);
+  const featuredProviders = providers.slice(0, FEATURED_PROVIDER_LIMIT);
 
   // Related specialties (exclude current)
   const relatedSpecialties = allSpecialties
@@ -172,7 +185,7 @@ export default async function SpecialtyPage({ params }: PageProps) {
                     <span className="w-1 h-1 rounded-full bg-warm-300" />
                     <span className="flex items-center gap-1.5">
                       <MapPin size={14} className="text-gold-400" />
-                      {cities.length} cit{cities.length !== 1 ? 'ies' : 'y'}
+                      {cityMap.size} cit{cityMap.size !== 1 ? 'ies' : 'y'}
                     </span>
                   </>
                 )}
@@ -188,18 +201,43 @@ export default async function SpecialtyPage({ params }: PageProps) {
           <div className="flex flex-col lg:flex-row gap-10">
             {/* Provider List */}
             <div className="flex-1 min-w-0">
+              {states.length > 0 && (
+                <AnimatedSection>
+                  <h2 className="text-2xl font-bold text-ink mb-6">
+                    Browse {specialty.name.toLowerCase()} specialists by state
+                  </h2>
+                  <StaggerContainer className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12" staggerDelay={0.03}>
+                    {states.map((state) => (
+                      <StaggerItem key={state.stateSlug}>
+                        <Link
+                          href={stateSpecialtyRoute(state.stateSlug, slug)}
+                          className="card p-4 flex items-center justify-between group/state"
+                        >
+                          <span className="font-semibold text-ink group-hover/state:text-rose-500 transition-colors truncate">
+                            {deslugify(state.stateSlug)}
+                          </span>
+                          <span className="tag tag-rose text-xs py-0.5 px-2 shrink-0">
+                            {state.count}
+                          </span>
+                        </Link>
+                      </StaggerItem>
+                    ))}
+                  </StaggerContainer>
+                </AnimatedSection>
+              )}
+
               <AnimatedSection>
                 <h2 className="text-2xl font-bold text-ink mb-6">
-                  {specialty.name} therapists
+                  Featured {specialty.name.toLowerCase()} therapists
                   <span className="text-ink-muted font-normal text-lg ml-2">
-                    ({providers.length})
+                    ({featuredProviders.length} of {providers.length})
                   </span>
                 </h2>
               </AnimatedSection>
 
               {providers.length > 0 ? (
                 <StaggerContainer className="space-y-5" staggerDelay={0.06}>
-                  {providers.map((provider, i) => (
+                  {featuredProviders.map((provider, i) => (
                     <StaggerItem key={provider.slug}>
                       <ProviderCard provider={provider} index={i} />
                     </StaggerItem>
@@ -303,7 +341,7 @@ export default async function SpecialtyPage({ params }: PageProps) {
                 <p>
                   Our directory features {providers.length} qualified{' '}
                   {specialty.name.toLowerCase()} specialist{providers.length !== 1 ? 's' : ''}{' '}
-                  across {cities.length} cit{cities.length !== 1 ? 'ies' : 'y'}. Each provider
+                  across {cityMap.size} cit{cityMap.size !== 1 ? 'ies' : 'y'} in {states.length} state{states.length !== 1 ? 's' : ''}. Each provider
                   listing includes their credentials, practice information, accepted insurance,
                   and contact details so you can find the right fit for your needs.
                 </p>

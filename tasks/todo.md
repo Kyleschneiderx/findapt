@@ -26,7 +26,8 @@
 - [x] Legacy apostrophe specialty slugs (women-s-health etc.) 301 → current slugs in proxy.ts (555 crawled URLs)
 - [x] Data: normalized duplicate city spellings (Lee’s Summit → Lee's Summit, Winston Salem → Winston-Salem) that made city_stats return 2 rows and 404 the city page
 - [x] Verify: re-check of all 8,623 prod-404 URLs against local build → 8,036 × 200, 555 × 301, 32 × 404 (27 state telehealth pages with no providers, 4 CA state×specialty with no CA providers, 1 retired provider slug — none linked anymore)
-- [ ] Commit
+- [x] National specialty page: Vercel deploy failed (42 MB prerender for pelvic-floor-dysfunction once the 1,000-row cap was lifted). Page is now a hub: state grid → state×specialty pages, 24 featured provider cards (350 KB)
+- [x] Commit + push (Vercel deploys from main)
 
 ## Review (2026-09-24)
 - The GSC "Not found (404)" bucket (5,104) was overwhelmingly self-inflicted: internal links pointing at pages whose notFound() rule they didn't satisfy, plus a slug map that drifted from the DB and a rewrite rule that re-matched its own output.
