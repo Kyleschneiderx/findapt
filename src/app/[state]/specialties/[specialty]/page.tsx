@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, MapPin, Users, Sparkles, Filter, Video } from 'lucide-react';
-import { getProvidersForStateSpecialty, getCities, getSpecialties } from '@/lib/data';
-import { specialtySlugToName, deslugify, slugify } from '@/lib/utils';
+import { getProvidersForStateSpecialty, getCities, getSpecialties, getSpecialtyBySlug, getStateSpecialtyCounts } from '@/lib/data';
+import { deslugify } from '@/lib/utils';
 import { SPECIALTY_META } from '@/lib/types';
 import { stateRoute, stateSpecialtyRoute, stateSpecialtiesRoute, citySpecialtyRoute, specialtyRoute, specialtiesIndexRoute, stateTelehealthRoute, providerRoute } from '@/lib/routes';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -20,7 +20,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { state: stateSlug, specialty: specialtySlug } = await params;
-  const specialtyName = specialtySlugToName(specialtySlug);
+  const specialtyName = (await getSpecialtyBySlug(specialtySlug))?.name ?? null;
   if (!specialtyName) return { title: 'Specialty Not Found | FindaPelvicPT' };
 
   const stateName = deslugify(stateSlug);
@@ -50,13 +50,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function StateSpecialtyPage({ params }: PageProps) {
   const { state: stateSlug, specialty: specialtySlug } = await params;
-  const specialtyName = specialtySlugToName(specialtySlug);
+  const specialtyName = (await getSpecialtyBySlug(specialtySlug))?.name ?? null;
 
   if (!specialtyName) notFound();
 
-  const [providers, allSpecialties] = await Promise.all([
+  const [providers, allSpecialties, stateSpecialtyCounts] = await Promise.all([
     getProvidersForStateSpecialty(stateSlug, specialtyName),
     getSpecialties(),
+    getStateSpecialtyCounts(stateSlug),
   ]);
 
   if (providers.length === 0) notFound();
@@ -85,9 +86,10 @@ export default async function StateSpecialtyPage({ params }: PageProps) {
     (a, b) => b.count - a.count
   );
 
-  // Related specialties (exclude current)
+  // Related specialties (exclude current; only those with providers in this state,
+  // since the state × specialty page 404s when empty)
   const relatedSpecialties = allSpecialties
-    .filter((s) => s.slug !== specialtySlug)
+    .filter((s) => s.slug !== specialtySlug && (stateSpecialtyCounts[s.slug] || 0) > 0)
     .slice(0, 10);
 
   // Check for telehealth providers

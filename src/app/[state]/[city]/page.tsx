@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, Users, ArrowRight, Filter } from 'lucide-react';
-import { getCityBySlug, getCities, getProviders } from '@/lib/data';
+import { getCityBySlug, getCities, getProviders, hasTelehealthProviders } from '@/lib/data';
 import { deslugify, slugify } from '@/lib/utils';
 import { stateRoute, cityRoute, citySpecialtyRoute, providerRoute, stateTelehealthRoute } from '@/lib/routes';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -45,10 +45,11 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
 export default async function CityPage({ params }: CityPageProps) {
   const { state: stateSlug, city: citySlug } = await params;
 
-  const [cityInfo, providers, allCities] = await Promise.all([
+  const [cityInfo, providers, allCities, stateHasTelehealth] = await Promise.all([
     getCityBySlug(citySlug, stateSlug),
     getProviders({ city_slug: citySlug, state_slug: stateSlug }),
     getCities(stateSlug),
+    hasTelehealthProviders(stateSlug),
   ]);
 
   if (!cityInfo || providers.length === 0) {
@@ -300,14 +301,18 @@ export default async function CityPage({ params }: CityPageProps) {
                     className="text-rose-500 hover:text-rose-600 font-medium transition-colors"
                   >
                     other {stateName} cities
-                  </Link>{' '}
-                  or explore providers who offer{' '}
-                  <Link
-                    href={stateTelehealthRoute(stateSlug)}
-                    className="text-rose-500 hover:text-rose-600 font-medium transition-colors"
-                  >
-                    telehealth consultations
                   </Link>
+                  {stateHasTelehealth && (
+                    <>
+                      {' '}or explore providers who offer{' '}
+                      <Link
+                        href={stateTelehealthRoute(stateSlug)}
+                        className="text-rose-500 hover:text-rose-600 font-medium transition-colors"
+                      >
+                        telehealth consultations
+                      </Link>
+                    </>
+                  )}
                   .
                 </p>
               </div>

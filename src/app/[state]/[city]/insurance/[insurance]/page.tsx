@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Shield, Users, ArrowRight, Filter } from 'lucide-react';
-import { getProvidersByInsurance, getInsurancesForCity, getCityBySlug } from '@/lib/data';
+import { getProvidersByInsurance, getInsurancesForCity, getCityBySlug, hasTelehealthProviders } from '@/lib/data';
 import { insuranceSlugToName, deslugify, slugify } from '@/lib/utils';
 import { stateRoute, cityRoute, cityInsuranceRoute, cityTelehealthRoute, specialtyRoute, providerRoute } from '@/lib/routes';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -27,10 +27,14 @@ export async function generateMetadata({ params }: InsurancePageProps): Promise<
   const stateName = deslugify(stateSlug);
   const title = `${insuranceName} Pelvic Floor Physical Therapy in ${cityInfo.city}, ${stateName} | FindaPelvicPT`;
   const description = `Find pelvic floor physical therapists in ${cityInfo.city}, ${stateName} who accept ${insuranceName}. Compare providers, view specialties, and book appointments.`;
+  const providers = await getProvidersByInsurance(stateSlug, citySlug, insuranceName);
 
   return {
     title,
     description,
+    // Single-provider pages serve (they're linked from state insurance pages)
+    // but stay out of the index as thin content. Sitemap lists 2+ combos only.
+    robots: providers.length < 2 ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description,
@@ -48,13 +52,15 @@ export default async function InsurancePage({ params }: InsurancePageProps) {
 
   const insuranceName = insuranceSlugToName(insuranceSlug);
 
-  const [cityInfo, providers, allInsurances] = await Promise.all([
+  const [cityInfo, providers, allInsurances, cityHasTelehealth] = await Promise.all([
     getCityBySlug(citySlug, stateSlug),
     getProvidersByInsurance(stateSlug, citySlug, insuranceName),
     getInsurancesForCity(stateSlug, citySlug),
+    hasTelehealthProviders(stateSlug, citySlug),
   ]);
 
-  if (!cityInfo || providers.length < 2) {
+  // Serve any combo with at least one provider; <2 is noindexed in metadata.
+  if (!cityInfo || providers.length === 0) {
     notFound();
   }
 
@@ -335,14 +341,19 @@ export default async function InsurancePage({ params }: InsurancePageProps) {
                       </Link>
                     </>
                   )}
-                  . You can also explore providers who offer{' '}
-                  <Link
-                    href={cityTelehealthRoute(stateSlug, citySlug)}
-                    className="text-rose-500 hover:text-rose-600 font-medium transition-colors"
-                  >
-                    telehealth consultations
-                  </Link>{' '}
-                  for added convenience.
+                  {cityHasTelehealth && (
+                    <>
+                      . You can also explore providers who offer{' '}
+                      <Link
+                        href={cityTelehealthRoute(stateSlug, citySlug)}
+                        className="text-rose-500 hover:text-rose-600 font-medium transition-colors"
+                      >
+                        telehealth consultations
+                      </Link>{' '}
+                      for added convenience
+                    </>
+                  )}
+                  .
                 </p>
               </div>
             </div>

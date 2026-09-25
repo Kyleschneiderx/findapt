@@ -48,8 +48,13 @@ const nextConfig: NextConfig = {
         destination: '/:state/:city/telehealth',
       },
       // /california/los-angeles/pelvic-pain-therapy → city × specialty
+      // beforeFiles rewrites keep matching after a hit, so the state rule's
+      // output (/:state/specialties/manual-therapy) would otherwise re-match
+      // here with city="specialties". The :city lookahead excludes reserved
+      // segments; the :specialty lookahead keeps provider slugs that end in
+      // "-physical-therapy" (practice names) on the provider route.
       {
-        source: '/:state/:city/:specialty-therapy',
+        source: '/:state/:city((?!(?:specialties|insurance|telehealth)/)[^/]+)/:specialty((?!.*-physical-therapy$)[^/]+)-therapy',
         destination: '/:state/:city/specialties/:specialty',
       },
       // /california/los-angeles/medi-cal-pelvic-floor-pt → city × insurance

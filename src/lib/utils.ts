@@ -1,6 +1,11 @@
+/**
+ * Must stay in sync with the `specialty_stats` view in supabase/migration.sql,
+ * which strips apostrophes before slugging ("Women's Health" → "womens-health").
+ */
 export function slugify(text: string): string {
   return text
     .toLowerCase()
+    .replace(/'/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 }
@@ -80,35 +85,6 @@ export function getStateFullName(abbr: string): string {
 
 export function getStateSlug(abbr: string): string {
   return slugify(getStateFullName(abbr));
-}
-
-/** Map specialty slugs back to their canonical display names */
-const SPECIALTY_SLUG_TO_NAME: Record<string, string> = {
-  'pelvic-floor-dysfunction': 'Pelvic Floor Dysfunction',
-  'pelvic-pain': 'Pelvic Pain',
-  'urinary-incontinence': 'Urinary Incontinence',
-  'bowel-dysfunction': 'Bowel Dysfunction',
-  'postpartum': 'Postpartum',
-  'prenatal': 'Prenatal',
-  'pelvic-organ-prolapse': 'Pelvic Organ Prolapse',
-  'diastasis-recti': 'Diastasis Recti',
-  'sexual-health': 'Sexual Health',
-  'endometriosis': 'Endometriosis',
-  'orthopedic': 'Orthopedic',
-  'oncology': 'Oncology',
-  'pediatric': 'Pediatric',
-  'mens-health': "Men's Health",
-  'telehealth': 'Telehealth',
-  'pilates': 'Pilates',
-  'manual-therapy': 'Manual Therapy',
-  'biofeedback': 'Biofeedback',
-  'vaginismus': 'Vaginismus',
-  'vulvodynia': 'Vulvodynia',
-  'dry-needling': 'Dry Needling',
-};
-
-export function specialtySlugToName(slug: string): string | null {
-  return SPECIALTY_SLUG_TO_NAME[slug] || null;
 }
 
 /** Map insurance slugs back to display names */

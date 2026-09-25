@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Sparkles, Users, ArrowRight } from 'lucide-react';
-import { getProvidersForStateSpecialty, getSpecialties, getStates } from '@/lib/data';
+import { getProvidersForStateSpecialty, getSpecialties, getStates, hasTelehealthProviders } from '@/lib/data';
 import { deslugify } from '@/lib/utils';
 import { SPECIALTY_META } from '@/lib/types';
 import { stateRoute, stateSpecialtiesRoute, stateSpecialtyRoute, stateTelehealthRoute } from '@/lib/routes';
@@ -41,7 +41,10 @@ export default async function StateSpecialtiesPage({ params }: PageProps) {
   const { state: stateSlug } = await params;
   const stateName = deslugify(stateSlug);
 
-  const allSpecialties = await getSpecialties();
+  const [allSpecialties, stateHasTelehealth] = await Promise.all([
+    getSpecialties(),
+    hasTelehealthProviders(stateSlug),
+  ]);
   if (!allSpecialties.length) notFound();
 
   // Get provider counts per specialty for this state
@@ -163,12 +166,17 @@ export default async function StateSpecialtiesPage({ params }: PageProps) {
                   where they practice. You can also{' '}
                   <Link href={stateRoute(stateSlug)} className="text-rose-500 hover:text-rose-600 font-medium">
                     browse all providers in {stateName}
-                  </Link>{' '}
-                  or explore{' '}
-                  <Link href={stateTelehealthRoute(stateSlug)} className="text-rose-500 hover:text-rose-600 font-medium">
-                    telehealth options
-                  </Link>{' '}
-                  for virtual appointments.
+                  </Link>
+                  {stateHasTelehealth && (
+                    <>
+                      {' '}or explore{' '}
+                      <Link href={stateTelehealthRoute(stateSlug)} className="text-rose-500 hover:text-rose-600 font-medium">
+                        telehealth options
+                      </Link>{' '}
+                      for virtual appointments
+                    </>
+                  )}
+                  .
                 </p>
               </div>
             </div>

@@ -7,6 +7,7 @@ import {
   getCitySpecialtyCombos,
   getTelehealthProviders,
   getInsuranceCityCombos,
+  getStateSpecialtyCounts,
 } from '@/lib/data';
 import {
   stateRoute,
@@ -49,14 +50,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}${stateInsuranceRoute(state.state_slug)}`, lastModified: now, changeFrequency: 'weekly' as const, priority: 0.7 },
   ]);
 
-  // ─── Tier 2: State × Specialty Pages (all states × all specialties) ───
-  const stateSpecialtyPages: MetadataRoute.Sitemap = states.flatMap((state) =>
-    specialties.map((specialty) => ({
-      url: `${siteUrl}${stateSpecialtyRoute(state.state_slug, specialty.slug)}`,
-      lastModified: now,
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    }))
+  // ─── Tier 2: State × Specialty Pages (only combos with providers — the page 404s otherwise) ───
+  const allStateSpecialtyCounts = await Promise.all(
+    states.map((state) => getStateSpecialtyCounts(state.state_slug))
+  );
+  const stateSpecialtyPages: MetadataRoute.Sitemap = states.flatMap((state, i) =>
+    specialties
+      .filter((specialty) => (allStateSpecialtyCounts[i][specialty.slug] || 0) > 0)
+      .map((specialty) => ({
+        url: `${siteUrl}${stateSpecialtyRoute(state.state_slug, specialty.slug)}`,
+        lastModified: now,
+        changeFrequency: 'weekly' as const,
+        priority: 0.9,
+      }))
   );
 
   // ─── Tier 2: City Pages ───

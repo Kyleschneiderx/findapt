@@ -27,6 +27,16 @@ const NON_CITY_SEGMENTS = new Set([
   'api',
 ]);
 
+// Specialty slugs used to keep the apostrophe as a dash ("women-s-health").
+// slugify() now strips it to match the specialty_stats view ("womens-health").
+// Google crawled the old spellings, so 301 them to the current slug.
+const LEGACY_SPECIALTY_SLUGS: Record<string, string> = {
+  'women-s-health': 'womens-health',
+  'men-s-pelvic-health': 'mens-pelvic-health',
+  'men-s-health': 'mens-health',
+};
+const LEGACY_SPECIALTY_RE = /^(women-s-health|men-s-pelvic-health|men-s-health)-(therapy|physical-therapy)$/;
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const segments = pathname.split('/').filter(Boolean);
@@ -34,6 +44,15 @@ export function proxy(request: NextRequest) {
   // Skip non-page routes
   if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
     return NextResponse.next();
+  }
+
+  // ─── Legacy apostrophe specialty slugs → current slugs (any depth) ───
+  const last = segments[segments.length - 1] || '';
+  const legacy = last.match(LEGACY_SPECIALTY_RE);
+  if (legacy) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${[...segments.slice(0, -1), `${LEGACY_SPECIALTY_SLUGS[legacy[1]]}-${legacy[2]}`].join('/')}`;
+    return NextResponse.redirect(url, 301);
   }
 
   // Skip if URL already contains keyword suffixes (already on new URLs)

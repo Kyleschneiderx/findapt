@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, MapPin, Users, Sparkles, Shield, Video } from 'lucide-react';
-import { getProvidersForCitySpecialty, getCityBySlug, getProviders, getProvidersForStateSpecialty } from '@/lib/data';
-import { specialtySlugToName, deslugify, slugify } from '@/lib/utils';
+import { getProvidersForCitySpecialty, getCityBySlug, getProviders, getProvidersForStateSpecialty, getSpecialtyBySlug } from '@/lib/data';
+import { deslugify, slugify } from '@/lib/utils';
 import { SPECIALTY_META } from '@/lib/types';
 import { stateRoute, cityRoute, stateSpecialtyRoute, citySpecialtyRoute, providerRoute } from '@/lib/routes';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -20,7 +20,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { state: stateSlug, city: citySlug, specialty: specialtySlug } = await params;
-  const specialtyName = specialtySlugToName(specialtySlug);
+  const specialtyName = (await getSpecialtyBySlug(specialtySlug))?.name ?? null;
   if (!specialtyName) return { title: 'Not Found | FindaPelvicPT' };
 
   const cityInfo = await getCityBySlug(citySlug, stateSlug);
@@ -34,6 +34,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title,
+    // Single-provider pages serve (they're linked from city pages) but stay
+    // out of the index as thin content. The sitemap only lists 2+ combos.
+    robots: providers.length < 2 ? { index: false, follow: true } : undefined,
     description,
     openGraph: {
       title,
@@ -50,7 +53,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function CitySpecialtyPage({ params }: PageProps) {
   const { state: stateSlug, city: citySlug, specialty: specialtySlug } = await params;
-  const specialtyName = specialtySlugToName(specialtySlug);
+  const specialtyName = (await getSpecialtyBySlug(specialtySlug))?.name ?? null;
 
   if (!specialtyName) notFound();
 
@@ -62,8 +65,8 @@ export default async function CitySpecialtyPage({ params }: PageProps) {
       getProvidersForStateSpecialty(stateSlug, specialtyName),
     ]);
 
-  // Require 2+ providers for thin content filter
-  if (!cityInfo || providers.length < 2) {
+  // Serve any combo with at least one provider; <2 is noindexed in metadata.
+  if (!cityInfo || providers.length === 0) {
     notFound();
   }
 

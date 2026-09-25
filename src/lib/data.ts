@@ -1,6 +1,27 @@
 import { supabase } from './supabase';
 import type { Provider, CityInfo, SpecialtyInfo } from './types';
 import { SPECIALTY_META } from './types';
+import { slugify } from './utils';
+
+/**
+ * Supabase (PostgREST) caps every response at 1,000 rows regardless of the
+ * query. Any "fetch everything" call must page through with .range() or the
+ * result is silently truncated (this is what left 5,000 providers and 1,400
+ * cities out of the sitemap).
+ */
+const PAGE_SIZE = 1000;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAll<T>(buildQuery: () => any): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data as T[]));
+    if (!data || data.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
 
 export async function getProviders(options?: {
   city_slug?: string;
@@ -29,9 +50,14 @@ export async function getProviders(options?: {
 
   query = query.order('display_name', { ascending: true });
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as Provider[];
+  if (options?.limit || options?.offset) {
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as Provider[];
+  }
+
+  // No explicit paging requested: return the full result set.
+  return fetchAll<Provider>(() => query);
 }
 
 export async function getProviderBySlug(slug: string): Promise<Provider | null> {
@@ -54,9 +80,7 @@ export async function getCities(stateSlug?: string): Promise<CityInfo[]> {
 
   query = query.order('provider_count', { ascending: false });
 
-  const { data, error } = await query;
-  if (error) throw error;
-  return data as CityInfo[];
+  return fetchAll<CityInfo>(() => query);
 }
 
 export async function getCityBySlug(citySlug: string, stateSlug: string): Promise<CityInfo | null> {
@@ -150,6 +174,46 @@ export async function getProvidersForStateSpecialty(
   return data as Provider[];
 }
 
+/**
+ * Provider count per specialty slug within a state. Used to decide which
+ * state × specialty pages actually exist (the page 404s with zero providers).
+ */
+export async function getStateSpecialtyCounts(stateSlug: string): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('providers')
+    .select('specialties')
+    .eq('state_slug', stateSlug);
+
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const p of data || []) {
+    for (const spec of p.specialties || []) {
+      const slug = slugify(spec);
+      counts[slug] = (counts[slug] || 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/**
+ * Whether any telehealth providers exist for a state (or a city within it).
+ * Telehealth pages 404 when empty, so links to them must be conditional.
+ */
+export async function hasTelehealthProviders(stateSlug: string, citySlug?: string): Promise<boolean> {
+  let query = supabase
+    .from('providers')
+    .select('id', { count: 'exact', head: true })
+    .eq('telehealth_available', true)
+    .eq('state_slug', stateSlug);
+
+  if (citySlug) query = query.eq('city_slug', citySlug);
+
+  const { count, error } = await query;
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
 // ─── Tier 3: City × Specialty ───
 
 export async function getProvidersForCitySpecialty(
@@ -187,7 +251,7 @@ export async function getCitySpecialtyCombos(
 
   for (const p of providers || []) {
     for (const spec of p.specialties || []) {
-      const slug = spec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const slug = slugify(spec);
       const key = `${p.city_slug}|${slug}`;
       if (!combos[key]) {
         combos[key] = { city: p.city, city_slug: p.city_slug, specialty: spec, specialty_slug: slug, count: 0 };
@@ -270,7 +334,7 @@ export async function getInsurancesForCity(
     .filter(([, count]) => count >= 2)
     .map(([name, count]) => ({
       name,
-      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      slug: slugify(name),
       count,
     }))
     .sort((a, b) => b.count - a.count);
@@ -295,7 +359,7 @@ export async function getInsuranceCityCombos(
     for (const ins of p.insurance_accepted || []) {
       const name = ins.trim();
       if (name && name !== 'Contact for details' && name !== 'Unknown') {
-        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = slugify(name);
         const key = `${p.city_slug}|${slug}`;
         if (!combos[key]) {
           combos[key] = { city_slug: p.city_slug, insurance_slug: slug, insurance_name: name, count: 0 };
